@@ -1,0 +1,30 @@
+DATASET: 'Cifar10'
+DATA_PATH: 'data/cifar10/cifar-10-batches-py'
+
+CLASS_NAMES: ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+NUM_CLASSES: 10
+
+TRANSFORMS:
+    TRAIN:
+        - NAME: RandomHorizontalFlip
+        - NAME: RandomCrop
+          PARAMS:
+            size: 32
+            padding: 4
+        - NAME: ToTensor
+        - NAME: Normalize
+          PARAMS:
+            mean: [0.4914, 0.4822, 0.4465]
+            std: [0.2023, 0.1994, 0.2010]
+    VAL:
+        - NAME: ToTensor
+        - NAME: Normalize
+          PARAMS:
+            mean: [0.4914, 0.4822, 0.4465]
+            std: [0.2023, 0.1994, 0.2010]
+    TEST:
+        - NAME: ToTensor
+        - NAME: Normalize
+          PARAMS:
+            mean: [0.4914, 0.4822, 0.4465]
+            std: [0.2023, 0.1994, 0.2010]

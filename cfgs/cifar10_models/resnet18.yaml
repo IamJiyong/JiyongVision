@@ -1,0 +1,54 @@
+DATA_CONFIG:
+    _BASE_CONFIG_: cfgs/dataset_configs/cifar10.yaml
+    TRANSFORMS:
+        TRAIN:
+            - NAME: RandomHorizontalFlip
+            - NAME: RandomCrop
+              PARAMS:
+                size: 32
+                padding: 4
+            - NAME: ToTensor
+            - NAME: Normalize
+              PARAMS:
+                mean: [0.4914, 0.4822, 0.4465]
+                std: [0.2023, 0.1994, 0.2010]
+        VAL:
+            - NAME: ToTensor
+            - NAME: Normalize
+              PARAMS:
+                mean: [0.4914, 0.4822, 0.4465]
+                std: [0.2023, 0.1994, 0.2010]
+
+MODEL:
+    NAME: ResNet
+    BACKBONE:
+        NAME: ResNet18
+        PRETRAINED: False
+    HEAD:
+        NAME: ResNetHead
+        IN_DIM: 512
+        NUM_CLASSES: 10
+        LOSS:
+            NAME: CrossEntropyLoss
+
+    ENSEMBLE:
+        ENABLE: True
+        # no matter what it is, the horizontal_flip will be applied (hard-coded)
+        TRANSFORMS: horizontal_flip
+        METHOD: mean
+
+OPTIMIZATION:
+    BATCH_SIZE: 128
+    NUM_EPOCHS: 100
+
+    OPTIMIZER:
+        NAME: Adam
+        PARAMS:
+            lr: 0.001
+            weight_decay: 0.0005
+    
+    LR_SCHEDULER:
+        NAME: CosineAnnealingLR
+        PARAMS:
+            T_max: 10
+            eta_min: 0

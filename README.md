@@ -6,7 +6,7 @@ This repository contains scripts for training and testing models on the CIFAR-10
 To prepare the CIFAR-10 dataset, run the following command:
 
 ```bash
-python modules.dataset.cifar10.py --data_path ./data/cifar10
+python modules/dataset/cifar10.py --data_path ./data/cifar10
 ```
 
 ## 2. Training and Testing

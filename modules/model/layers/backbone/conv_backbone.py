@@ -49,7 +49,6 @@ class ConvNetBackbone(BackboneTemplate):
 
     def forward(self, batch_dict):
         x = batch_dict[self.input_key]
-        # x = self.backbone(x)
         for i, m in enumerate(self.backbone):
             x = m(x)
             if i in self.save_intermediate_features:

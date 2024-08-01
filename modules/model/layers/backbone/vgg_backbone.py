@@ -9,7 +9,8 @@ class VGGBackbone(BackboneTemplate):
     def __init__(self, backbone_config) -> None:
         super(VGGBackbone, self).__init__(backbone_config)
         
-        architecture, self.name = self.get_vgg_params(backbone_config.NUM_LAYERS)
+        self.num_layers = backbone_config.NUM_LAYERS
+        architecture, self.name = self.get_vgg_params(self.num_layers)
         batch_norm = backbone_config.get('BATCH_NORM', False)
         
         self.features = self._make_layers(architecture, batch_norm)

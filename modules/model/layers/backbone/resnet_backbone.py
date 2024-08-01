@@ -149,6 +149,7 @@ class ResNetBackbone(BackboneTemplate):
         width_per_group = backbone_config.get('WIDTH_PER_GROUP', 64)
         replace_stride_with_dilation = backbone_config.get('REPLACE_STRIDE_WITH_DILATION', None)
 
+        self.num_layers = backbone_config.NUM_LAYERS
         params, self.name = self.get_resnet_params(backbone_config.NUM_LAYERS)
         block = params['BLOCK']
         layers = params['NUM_BLOCKS']

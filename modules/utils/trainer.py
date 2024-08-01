@@ -48,8 +48,7 @@ class Trainer:
         self.model.train()
         running_loss = 0.0
 
-        pbar = tqdm.tqdm(total=len(self.train_dataloader), desc="Training", dynamic_ncols=True)
-        disp_dict = {}
+        pbar = tqdm.tqdm(total=len(self.train_dataloader), desc="Training", dynamic_ncols=True, leave=False)
         
         for i, batch_dict in enumerate(self.train_dataloader):
             batch_dict = load_data_to_gpu(batch_dict)
@@ -67,7 +66,8 @@ class Trainer:
             
             pbar.set_postfix({loss_key: loss_val.item() for loss_key, loss_val in loss_dict.items()})
             pbar.update(1)
-
+        
+        pbar.close()
         return running_loss / len(self.train_dataloader)
 
 

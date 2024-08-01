@@ -30,8 +30,6 @@ MODEL:
         ASPECT_RATIOS: [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
         STEPS: [8, 16, 32, 64, 100, 300]
         CLIP: True
-        MIN_SIZES: [30, 60, 111, 162, 213, 264]
-        MAX_SIZES: [60, 111, 162, 213, 264, 315]
         SCALES: [0.07, 0.15, 0.33, 0.51, 0.69, 0.87, 1.05]
 
       LOSS:
@@ -48,9 +46,8 @@ MODEL:
           REG_LOSS: 1.0
       
   POST_PROCESSING:
-    NUM_CLASSES: 21
     TOPK_CANDIDATES: 200
-    SCORE_THRESH: 0.5
+    SCORE_THRESH: 0.01
     NMS_THRESH: 0.45
 
 OPTIMIZATION:

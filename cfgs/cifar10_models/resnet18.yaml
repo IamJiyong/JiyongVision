@@ -58,12 +58,7 @@ OPTIMIZATION:
       weight_decay: 0.0005
   
   LR_SCHEDULER:
-    # NAME: ConstantLR
-    # PARAMS: {}
     NAME: CosineAnnealingLR
     PARAMS:
       T_max: 10
       eta_min: 0
-    # NAME: OneCycleLR
-    # PARAMS:
-    #   max_lr: 0.001

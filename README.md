@@ -1,6 +1,6 @@
 # CIFAR-10 Model Training
 
-This repository contains scripts for training and testing models on the CIFAR-10 dataset.
+This repository contains scripts for training and testing models on the CIFAR-10 and VOC0712 datasets.
 
 ## 1. Data Preparation
 To prepare the CIFAR-10 dataset, run the following command:
@@ -29,7 +29,8 @@ python train.py --cfg_file cfgs/voc0712_models/ssd300_res101.yaml
 ```
 
 For detailed argument settings, refer to train.py.
-After training, the model willautmatically be tested on the test set.
+
+After training, the model will autmatically be tested on the test set.
 
 ## 3. Testing
 To test a specific model, run the following command:

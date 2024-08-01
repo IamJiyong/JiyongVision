@@ -1,0 +1,13 @@
+DATASET: 'MNIST'
+DATA_PATH: 'data/MNIST/raw'
+
+TASK: 'classification'
+
+CLASS_NAMES: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+NUM_CLASSES: 10
+
+TRANSFORMS:
+    TRAIN:
+        - NAME: ToTensor
+    VAL:
+        - NAME: ToTensor

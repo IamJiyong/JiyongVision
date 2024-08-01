@@ -1,0 +1,72 @@
+DATA_CONFIG:
+  _BASE_CONFIG_: cfgs/dataset_configs/voc0712.yaml
+
+MODEL:
+  NAME: SSD
+
+  MODULES:
+    _BASE_CONFIG_: cfgs/voc0712_models/backbone/ssd_backbone_res18.yaml # TODO: change to BACKBONE: _BASE_CONFIG_ in the future
+
+    HEAD:
+      NAME: SSDHead
+      
+      NUM_CLASSES: 21
+      IMAGE_SIZE: 300
+      MIN_DIM: 300
+      FEATURE_MAPS: [38, 19, 10, 5, 3, 1]
+      IN_CHANNEL: [128, 256, 512, 256, 256, 256]
+      MATCHING_IOU_THRESH: 0.5
+      
+      INTERMEDIATE_FEATURE_KEYS:
+        - ResNet_intermediate_2
+        - ResNet_intermediate_3
+        - ExtraConvNet_intermediate_1
+        - ExtraConvNet_intermediate_3
+        - ExtraConvNet_intermediate_5
+        - ExtraConvNet_intermediate_7
+
+      ANCHOR_GENERATOR:
+        ASPECT_RATIOS: [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
+        STEPS: [8, 16, 32, 64, 100, 300]
+        CLIP: True
+        MIN_SIZES: [30, 60, 111, 162, 213, 264]
+        MAX_SIZES: [60, 111, 162, 213, 264, 315]
+        SCALES: [0.07, 0.15, 0.33, 0.51, 0.69, 0.87, 1.05]
+
+      LOSS:
+        POSITIVE_FRACTION: 0.25
+
+        CLS_LOSS:
+          NAME: CrossEntropyLoss
+
+        REG_LOSS:
+          NAME: SmoothL1Loss
+          
+        WEIGHTS:
+          CLS_LOSS: 1.0
+          REG_LOSS: 1.0
+
+  POST_PROCESSING:
+    NUM_CLASSES: 21
+    TOPK_CANDIDATES: 200
+    SCORE_THRESH: 0.01
+    NMS_THRESH: 0.45
+
+OPTIMIZATION:
+  BATCH_SIZE: 32
+  BASE_BATCH_SIZE: 32
+  NUM_EPOCHS: 120
+
+  OPTIMIZER:
+    NAME: SGD
+    ADAPTIVE_PARAMS: False
+    PARAMS:
+      lr: 0.001
+      momentum: 0.9
+      weight_decay: 0.0005
+
+  LR_SCHEDULER:
+    NAME: MultiStepLR
+    PARAMS:
+      milestones: [80, 100]
+      gamma: 0.1

@@ -1,0 +1,35 @@
+DATASET: 'VOC0712'
+DATA_PATH: 'data/VOC0712/VOCdevkit'
+
+TASK: 'detection'
+
+CLASS_NAMES: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
+NUM_CLASSES: 20
+
+TRANSFORMS:
+  TRAIN:
+    - NAME: ConvertFromInts
+    - NAME: ToAbsoluteCoords
+    - NAME: PhotometricDistort
+    - NAME: Expand
+      PARAMS:
+        mean: [104, 117, 123]
+    - NAME: RandomSampleCrop
+    - NAME: RandomMirror
+    - NAME: ToPercentCoords
+    - NAME: Resize
+      PARAMS:
+        size: 300
+    - NAME: SubtractMeans
+      PARAMS:
+        mean: [104, 117, 123]
+  
+  VAL:
+    - NAME: ConvertFromInts
+    - NAME: ToAbsoluteCoords
+    - NAME: Resize
+      PARAMS:
+        size: 300
+    - NAME: SubtractMeans
+      PARAMS:
+        mean: [104, 117, 123]

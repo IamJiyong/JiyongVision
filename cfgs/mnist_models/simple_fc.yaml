@@ -1,0 +1,34 @@
+DATA_CONFIG:
+  _BASE_CONFIG_: cfgs/dataset_configs/mnist.yaml
+
+MODEL:
+  NAME: SimpleFCClassifier
+
+  MODULES:
+    BACKBONE:
+      NAME: SimpleFCBackbone
+      IN_DIM: 784
+      HIDDEN_DIMS: [256, 128]
+      ACTIVATION: relu
+
+    HEAD:
+      NAME: SimpleFCHead
+      IN_DIM: 128
+      NUM_CLASSES: 10
+  
+      LOSS:
+        NAME: CrossEntropyLoss
+        
+OPTIMIZATION:
+  BATCH_SIZE: 128
+  NUM_EPOCHS: 100
+
+  OPTIMIZER:
+    NAME: SGD
+    PARAMS:
+      lr: 0.01
+      momentum: 0.9
+  
+  LR_SCHEDULER:
+    NAME: ConstantLR
+  

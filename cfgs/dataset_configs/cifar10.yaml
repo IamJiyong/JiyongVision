@@ -1,5 +1,7 @@
 DATASET: 'Cifar10'
-DATA_PATH: 'data/cifar10/cifar-10-batches-py'
+DATA_PATH: 'data/CIFAR10/cifar-10-batches-py'
+
+TASK: 'classification'
 
 CLASS_NAMES: ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 NUM_CLASSES: 10

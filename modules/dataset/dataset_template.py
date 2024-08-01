@@ -1,16 +1,22 @@
 import torch
-import torchvision.transforms as T
-import torchvision.transforms.v2 as T2
+from torch.utils.data import Dataset
 
+from functools import partial
 from pathlib import Path
 from collections import defaultdict
 
+from modules.dataset.augmentation_utils.augmentor import Augmentor
 
-class DatasetTemplate(torch.utils.data.Dataset):
+
+class DatasetTemplate(Dataset):
     def __init__(self, root_path, data_config, mode, download=False):
+        self.num_classes = data_config.NUM_CLASSES
+        self.class_names = data_config.CLASS_NAMES
+        self.class_to_ind = dict(zip(self.class_names, range(len(self.class_names))))
+        
         self.root = root_path
-        self.data_path = root_path / Path(data_config["DATA_PATH"])
-        self.transform = self.get_transform(data_config["TRANSFORMS"], mode)
+        self.data_path = root_path / Path(data_config.DATA_PATH)
+        self.transform = Augmentor(data_config.TRANSFORMS, mode, task=data_config.TASK)
         self.mixup_transfomer = None
 
         self.download = download
@@ -32,8 +38,14 @@ class DatasetTemplate(torch.utils.data.Dataset):
     def load_data(self):
         raise NotImplementedError
     
+    def get_collate_fn(self):
+        return partial(DatasetTemplate.collate_batch, mixup=self.transform.mixup_transfomer)
+    
     @staticmethod
-    def collate_batch(batch_list):
+    def collate_batch(batch_list=None, mixup=None):
+        if batch_list is None:
+            return partial(DatasetTemplate.collate_batch, mixup=mixup)
+        
         data_dict = defaultdict(list)
         ret = {}
         for cur_sample in batch_list:
@@ -42,29 +54,26 @@ class DatasetTemplate(torch.utils.data.Dataset):
         batch_size = len(batch_list)
 
         for key,val in data_dict.items():
-            if key is 'img':
+            if key == 'img':
                 ret[key] = torch.stack(val, dim=0)
-            elif key is 'target':
+            elif key == 'target':
                 ret[key] = torch.tensor(val)
+            elif key == 'gt_boxes':
+                max_gt_num = max([len(x) for x in val])
+                gt_boxes = torch.zeros(batch_size, max_gt_num, val[0].shape[-1])
+                for i, boxes in enumerate(val):
+                    gt_boxes[i, :len(boxes)] = torch.tensor(boxes)
+                ret[key] = gt_boxes
+                # for i in range(batch_size):
+                #     val[i] = torch.tensor(val[i])
+                # ret[key] = val
+            elif key in ['img_id', 'original_size']:
+                ret[key] = val
             else:
                 raise NotImplementedError
         
+        if mixup is not None:
+            ret = mixup.apply(ret)
+        
         ret['batch_size'] = batch_size
         return ret
-
-    def get_transform(self, transform_cfg, mode):
-        transform = []
-        for cfg in transform_cfg[mode.upper()]:
-            name = cfg["NAME"]
-            if name == 'MixUp':
-                self.mixup_transfomer = T2.MixUp(**cfg["PARAMS"])
-                continue
-            params = cfg.get("PARAMS", {})
-            transform.append(getattr(T, name)(**params))
-        return T.Compose(transform)
-    
-    def mixup(self, batch_dict):
-        if self.mixup_transfomer is None:
-            return batch_dict
-        batch_dict['img'], batch_dict['target'] = self.mixup_transfomer(batch_dict['img'], batch_dict['target'])
-        return batch_dict

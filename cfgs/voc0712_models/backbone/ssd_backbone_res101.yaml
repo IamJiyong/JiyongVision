@@ -1,0 +1,88 @@
+BACKBONE:
+  - NAME: ResNetBackbone
+    NUM_LAYERS: 101
+    PRETRAINED: True
+    SAVE_INTERMEDIATE_FEATURES: True
+
+  - NAME: ConvNetBackbone
+    CODE: ResNetReplace
+    INPUT_KEY: spatial_features
+    OUTPUT_KEY: spatial_features
+    USE_BN: False
+    USE_RELU: True
+    LAST_BN: False
+    LAST_RELU: True
+    MODULES:
+      - NAME: MaxPool2d
+        PARAMS:
+          kernel_size: 3
+          stride: 1
+          padding: 1
+          ceil_mode: False
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 2048
+          out_channels: 1024
+          kernel_size: 3
+          padding: 6
+          dilation: 6
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 1024
+          out_channels: 1024
+          kernel_size: 1
+
+  - NAME: ConvNetBackbone
+    CODE: ExtraConvNet
+    INPUT_KEY: spatial_features
+    OUTPUT_KEY: spatial_features
+    USE_BN: False
+    USE_RELU: True
+    LAST_BN: False
+    LAST_RELU: True
+    SAVE_INTERMEDIATE_FEATURES: [1, 3, 5, 7]
+    MODULES:
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 1024
+          out_channels: 256
+          kernel_size: 1
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 256
+          out_channels: 512
+          kernel_size: 3
+          stride: 1
+          padding: 1
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 512
+          out_channels: 128
+          kernel_size: 1
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 128
+          out_channels: 256
+          kernel_size: 3
+          stride: 2
+          padding: 1
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 256
+          out_channels: 128
+          kernel_size: 1
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 128
+          out_channels: 256
+          kernel_size: 3
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 256
+          out_channels: 128
+          kernel_size: 1
+      - NAME: Conv2d
+        PARAMS:
+          in_channels: 128
+          out_channels: 256
+          kernel_size: 3

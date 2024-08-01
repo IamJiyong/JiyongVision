@@ -12,6 +12,7 @@ def merge_new_config(config, new_config):
             except:
                 yaml_config = yaml.safe_load(f)
         config.update(EasyDict(yaml_config))
+        new_config.pop('_BASE_CONFIG_')
 
     for key, val in new_config.items():
         if not isinstance(val, dict):

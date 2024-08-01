@@ -27,9 +27,6 @@ class Cifar10(DatasetTemplate):
         }
         return data_dict
 
-    def __len__(self):
-        return len(self.data)
-
     @staticmethod
     def download_data(data_path):
         Path(data_path).mkdir(parents=True, exist_ok=True)
@@ -67,7 +64,7 @@ class Cifar10(DatasetTemplate):
 def __main__():
     # Download and load the CIFAR-10 dataset
     parser = argparse.ArgumentParser(description="CIFAR-10 dataset loader")
-    parser.add_argument("--data_path", default=".", type=str, help="Root directory of dataset")
+    parser.add_argument("--data_path", default="./data/CIFAR10", type=str, help="Root directory of dataset")
     
     args = parser.parse_args()
 

@@ -1,118 +1,108 @@
 import torch
+import tqdm
+
 from torch.utils.tensorboard import SummaryWriter
 
-from modules.dataset import load_data_to_gpu
+from modules.optimization import build_optimizer, build_scheduler
+from .common_utils import load_data_to_gpu
+from .evaluator import Evaluator
 
 
 class Trainer:
-    def __init__(self, model, logger, args, cfgs):
+    def __init__(self, model, train_loader, val_loader, logger, args, optim_cfg):
         self.model = model.cuda()
+        self.train_dataloader = train_loader
+        self.val_dataloader = val_loader
         self.logger = logger
         self.val_freq = args.val_freq
         self.args = args
-        self.cfgs = cfgs
+        self.optim_cfg = optim_cfg  
 
-        self.optimizer = build_optimizer(cfgs.OPTIMIZER, model)
-        self.scheduler = build_scheduler(cfgs.LR_SCHEDULER, self.optimizer)
+        if self.optim_cfg.LR_SCHEDULER.NAME == 'OneCycleLR':
+            num_steps_per_epoch = len(self.train_dataloader)
+            optim_cfg.LR_SCHEDULER.PARAMS['total_steps'] = num_steps_per_epoch * optim_cfg.NUM_EPOCHS
+        self.optimizer = build_optimizer(self.model, optim_cfg.OPTIMIZER)
+        self.lr_scheduler = build_scheduler(self.optimizer, optim_cfg.LR_SCHEDULER)
 
-        self.best_val_loss = float('inf')
-        self.epochs_no_improve = 0
+        self.start_epoch = 1
+        self.accumulated_iter = 0
+        if args.ckpt_path is not None:
+            self.start_epoch, self.accumulated_iter = \
+                self.model.load_ckpt_with_optimizer(args.ckpt_path, self.optimizer, self.lr_scheduler)
+        
+        self.ckpt_save_interval = args.ckpt_save_interval
+        self.ckpt_dir = args.output_dir / "ckpt"
+        self.ckpt_dir.mkdir(parents=True, exist_ok=True)
 
-    def train_one_epoch(self, dataloader, num_iter, tb_dict=SummaryWriter()):
+        tb_dir = args.output_dir / "tensorboard"
+        tb_dir.mkdir(parents=True, exist_ok=True)
+        self.tb_dict = SummaryWriter(log_dir=tb_dir)
+
+        self.evaluator = Evaluator(model=model,
+                                   dataloader=val_loader,
+                                   output_path=args.output_dir,
+                                   logger=self.logger)
+
+
+    def train_one_epoch(self, tbar):
         self.model.train()
         running_loss = 0.0
-        for i, batch_dict in enumerate(dataloader):
+
+        pbar = tqdm.tqdm(total=len(self.train_dataloader), desc="Training", dynamic_ncols=True)
+        disp_dict = {}
+        
+        for i, batch_dict in enumerate(self.train_dataloader):
             batch_dict = load_data_to_gpu(batch_dict)
-            batch_dict = dataloader.dataset.mixup(batch_dict)
 
             self.optimizer.zero_grad()
-            loss = self.model(batch_dict)
+            loss_dict = self.model(batch_dict)
+            loss = loss_dict['loss']
             loss.backward()
             self.optimizer.step()
 
             running_loss += loss.item()
             
-            num_iter += i
-            tb_dict.add_scalar('Loss/train', loss.item(), num_iter)
+            self.accumulated_iter += i
+            self.tb_dict.add_scalar('Loss/train', loss.item(), self.accumulated_iter)
+            
+            pbar.set_postfix({loss_key: loss_val.item() for loss_key, loss_val in loss_dict.items()})
+            pbar.update(1)
 
-        return running_loss / len(dataloader), num_iter
+        return running_loss / len(self.train_dataloader)
 
-    def train(self, train_dataloader, val_dataloader):
-        tb_dict = SummaryWriter(log_dir=self.args.output_dir)
-        best_val_acc_top1 = 0.0
-        best_val_acc_top5 = 0.0
-        best_epoch = 0
-        num_iter = 0
-        for epoch in range(0, self.cfgs.NUM_EPOCHS):
-            train_loss, num_iter = self.train_one_epoch(train_dataloader, num_iter=num_iter, tb_dict=tb_dict)
-            self.scheduler.step()
 
-            self.logger.add_log('epoch {} train_loss: {}'.format(epoch, train_loss))
+    def save_ckpt(self, epoch):
+        checkpoint_file = self.ckpt_dir / "epoch_{}.pth".format(epoch)
+        self.model.save_ckpt(checkpoint_file, self.optimizer, self.lr_scheduler, epoch, self.accumulated_iter)
 
-            if epoch % self.val_freq == 0:
-                eval_dict = self.eval_one_epoch(val_dataloader)
-                val_loss = eval_dict['loss']
-                val_acc_top1 = eval_dict['top1_acc']
-                val_acc_top5 = eval_dict['top5_acc']
+        saved_ckpt_list = list(self.ckpt_dir.glob("*.pth"))
+        if len(saved_ckpt_list) > self.args.max_ckpt_save_num:
+            saved_ckpt_list = sorted(saved_ckpt_list, key=lambda x: x.stat().st_ctime)
+            for ckpt_file in saved_ckpt_list[:-self.args.max_ckpt_save_num]:
+                ckpt_file.unlink()
 
-                tb_dict.add_scalar('Loss/val', val_loss, epoch)
-                tb_dict.add_scalar('Accuracy_top1/val', val_acc_top1, epoch)
-                tb_dict.add_scalar('Accuracy_top5/val', val_acc_top5, epoch)
-                self.logger.add_log('epoch {} val_loss: {}, val_acc_top1: {}, val_acc_top5: {}'.format(epoch, val_loss, val_acc_top1, val_acc_top5))
 
-                if best_val_acc_top1 < val_acc_top1:
-                    best_val_acc_top1 = val_acc_top1
-                    best_val_acc_top5 = val_acc_top5
-                    best_epoch = epoch
-                    self.model.save_ckpt(self.args.output_dir / "best_model.pth")
-                
-                if self.args.save_every_ckpt:
-                    self.model.save_ckpt(self.args.output_dir / "epoch_{}.pth".format(epoch))
-
-            self.logger.save_logs()
+    def train(self, val_while_training=True):
+        total_epochs = self.optim_cfg.NUM_EPOCHS + 1
         
-        self.logger.add_log('Best acc at epoch {}'.format(best_epoch))
-        self.logger.add_log('Best val acc top1: {}'.format(best_val_acc_top1))
-        self.logger.add_log('Best val acc top5: {}'.format(best_val_acc_top5))
-        self.logger.save_logs()
+        with tqdm.trange(self.start_epoch, total_epochs, desc="epochs", dynamic_ncols=True) as tbar:
+            for epoch in tbar:
+                train_loss = self.train_one_epoch(tbar)
+                self.lr_scheduler.step()
 
-        tb_dict.close()
+                self.logger.add_log('epoch {}/{} train_loss: {}'.format(epoch, total_epochs, train_loss), print_log=False)
 
-        return best_val_acc_top1, best_val_acc_top5
-    
-    def eval_one_epoch(self, dataloader):
-        self.model.eval()
-        running_loss = 0.0
-        correct_top5 = 0
-        correct_top1 = 0
-        total = 0
-        with torch.no_grad():
-            for i, batch_dict in enumerate(dataloader):
-                batch_dict = load_data_to_gpu(batch_dict)
+                if val_while_training and epoch % self.val_freq == 0:
+                    is_best = self.evaluator.eval_one_epoch(self.tb_dict, epoch)
+                    if is_best:
+                        self.model.save_ckpt(path=self.ckpt_dir / "best.pth")
+                    
+                if self.ckpt_save_interval > 0 and epoch % self.ckpt_save_interval == 0:
+                    self.save_ckpt(epoch)
 
-                if self.model.ensemble:
-                    pred_dict, loss = self.model.forward_ensemble(batch_dict)
-                else:
-                    pred_dict, loss = self.model.forward(batch_dict)
-
-                running_loss += loss.item()
-
-                total += batch_dict['batch_size']
-                top5_correct = torch.topk(pred_dict['pred_scores'], 5).indices
-                correct_top5 += torch.sum(top5_correct == batch_dict['target'].unsqueeze(1)).item()
-                top1_correct = torch.argmax(pred_dict['pred_scores'], dim=1)
-                correct_top1 += torch.sum(top1_correct == batch_dict['target']).item()
-
-        eval_dict = {
-            'loss': running_loss / len(dataloader),
-            'top1_acc': correct_top1 / total,
-            'top5_acc': correct_top5 / total
-        }
-        return eval_dict
-
-
-def build_optimizer(optimizer_config, model):
-    return getattr(torch.optim, optimizer_config.NAME)(model.parameters(), **optimizer_config.PARAMS)
-
-def build_scheduler(scheduler_config, optimizer):
-    return getattr(torch.optim.lr_scheduler, scheduler_config.NAME)(optimizer, **scheduler_config.PARAMS)
+                self.logger.save_logs()
+        
+        if not val_while_training:
+            self.evaluator.eval_one_epoch(self.tb_dict, epoch)
+            self.save_ckpt(epoch)
+        self.evaluator.close_eval(self.tb_dict)

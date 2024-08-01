@@ -12,10 +12,6 @@ DATA_CONFIG:
         PARAMS:
           mean: [0.4914, 0.4822, 0.4465]
           std: [0.2023, 0.1994, 0.2010]
-      # - NAME: MixUp
-      #   PARAMS:
-      #     alpha: 1.0
-      #     apply_ratio: 0.3
     VAL:
       - NAME: ToTensor
       - NAME: Normalize
@@ -24,16 +20,16 @@ DATA_CONFIG:
           std: [0.2023, 0.1994, 0.2010]
 
 MODEL:
-  NAME: ResNet
+  NAME: VGGNet
   
   MODULES:
     BACKBONE:
-      NAME: ResNetBackbone
-      NUM_LAYERS: 18
+      NAME: VGGBackbone
+      NUM_LAYERS: 16
+      BATCH_NORM: True
       PRETRAINED: False
-      INIT_DOWNSAMPLE: False
     HEAD:
-      NAME: ResNetHead
+      NAME: VGGHead
       IN_DIM: 512
       NUM_CLASSES: 10
       LOSS:
@@ -58,12 +54,7 @@ OPTIMIZATION:
       weight_decay: 0.0005
   
   LR_SCHEDULER:
-    # NAME: ConstantLR
-    # PARAMS: {}
     NAME: CosineAnnealingLR
     PARAMS:
       T_max: 10
       eta_min: 0
-    # NAME: OneCycleLR
-    # PARAMS:
-    #   max_lr: 0.001

@@ -19,25 +19,11 @@ class SSDScoringHead(nn.Module):
         self.module_list = module_list
         self.num_columns = num_columns
 
-    def _get_result_from_module_list(self, x: Tensor, idx: int) -> Tensor:
-        """
-        This is equivalent to self.module_list[idx](x),
-        but torchscript doesn't support this yet
-        """
-        num_blocks = len(self.module_list)
-        if idx < 0:
-            idx += num_blocks
-        out = x
-        for i, module in enumerate(self.module_list):
-            if i == idx:
-                out = module(x)
-        return out
-
     def forward(self, x: List[Tensor]) -> Tensor:
         all_results = []
 
         for i, features in enumerate(x):
-            results = self._get_result_from_module_list(features, i)
+            results = self.module_list[i](features)
 
             # Permute output from (N, A * K, H, W) to (N, HWA, K).
             N, _, H, W = results.shape

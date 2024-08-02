@@ -12,8 +12,6 @@ MODEL:
       
       NUM_CLASSES: 21
       IMAGE_SIZE: 300
-      MIN_DIM: 300
-      FEATURE_MAPS: [38, 19, 10, 5, 3, 1]
       IN_CHANNEL: [128, 256, 512, 256, 256, 256]
       MATCHING_IOU_THRESH: 0.5
       

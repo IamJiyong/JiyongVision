@@ -1,8 +1,7 @@
 BACKBONE:
   - NAME: VGGBackbone
     NUM_LAYERS: 16
-    PRETRAINED: True # TODO: There is a bug. loss is nan when using pretrained model
-    BATCH_NORM: False
+    PRETRAINED: True
     SAVE_INTERMEDIATE_FEATURES: True
 
   - NAME: ConvNetBackbone
@@ -18,6 +17,7 @@ BACKBONE:
         PARAMS:
           kernel_size: 3
           stride: 1
+          padding: 1
           ceil_mode: False
       - NAME: Conv2d
         PARAMS:
